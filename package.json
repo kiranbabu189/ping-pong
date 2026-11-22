@@ -16,6 +16,14 @@
   ],
   "license": "MIT",
   "author": "kiranb189",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kiranbabu189/ping-pong.git"
+  },
+  "homepage": "https://github.com/kiranbabu189/ping-pong#readme",
+  "bugs": {
+    "url": "https://github.com/kiranbabu189/ping-pong/issues"
+  },
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
