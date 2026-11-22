@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>api-pingpong demo</title>
+<script>window.API_PINGPONG_OPTIONS = { trackFieldUsage: true, open: false };</script>
+<script src="/dist/api-pingpong.auto.global.js"></script>
+<style>
+  :root { --bg: #f6f7f9; --card: #fff; --fg: #1d2129; --muted: #5b6271; --line: #e1e4ea; --accent: #4f46e5; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #111216; --card: #1b1d22; --fg: #e7e9ee; --muted: #a3a9b6; --line: #2f333c; --accent: #8b85ff; } }
+  body { margin: 0; font: 15px/1.5 system-ui, sans-serif; background: var(--bg); color: var(--fg); }
+  main { max-width: 760px; margin: 0 auto; padding: 32px 16px 120px; }
+  h1 { margin: 0 0 4px; font-size: 26px; }
+  p { color: var(--muted); }
+  nav { display: flex; gap: 12px; margin: 16px 0; }
+  nav a { color: var(--accent); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+  button { font: inherit; text-align: left; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--fg); cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  button small { display: block; color: var(--muted); font-size: 12.5px; }
+  #out { margin-top: 18px; font: 13px/1.5 ui-monospace, Menlo, monospace; color: var(--muted); white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<main>
+  <h1>api-pingpong demo</h1>
+  <p>Click the scenarios, then open the floating button (bottom-right, or <kbd>Alt+Shift+A</kbd>).</p>
+  <nav><a href="/" data-link>/ (home)</a><a href="/dashboard" data-link>/dashboard</a><a href="/leads" data-link>/leads</a></nav>
+  <div class="grid">
+    <button id="load"><b>Load page data</b><small>/api/user/me, /api/config, /api/lead</small></button>
+    <button id="dup"><b>Duplicate calls</b><small>Same GET 3× at once (StrictMode-style)</small></button>
+    <button id="n1"><b>N+1 loop</b><small>List, then /api/lead/:id for each</small></button>
+    <button id="fail"><b>Failing call</b><small>500 from /api/fail</small></button>
+    <button id="slow"><b>Slow call</b><small>/api/slow takes ~1.6 s</small></button>
+    <button id="xhr"><b>XHR (axios-style)</b><small>POST /api/lead via XMLHttpRequest</small></button>
+    <button id="gql"><b>GraphQL</b><small>Two operations on POST /graphql</small></button>
+    <button id="sse"><b>Server-sent events</b><small>EventSource /api/events</small></button>
+    <button id="beacon"><b>sendBeacon</b><small>Analytics ping</small></button>
+    <button id="ext"><b>Third-party call</b><small>Cross-origin request (shows as its own host)</small></button>
+    <button id="use"><b>Over-fetch</b><small>Read only 2 fields of a big response</small></button>
+  </div>
+  <div id="out"></div>
+</main>
+<script>
+  const out = document.getElementById('out');
+  const log = (m) => (out.textContent = `${new Date().toLocaleTimeString()}  ${m}\n` + out.textContent);
+  const on = (id, fn) => document.getElementById(id).addEventListener('click', () => fn().catch((e) => log('error: ' + e.message)));
+  const get = (u) => fetch(u).then((r) => r.json());
+
+  on('load', async () => { await Promise.all([get('/api/user/me'), get('/api/config'), get('/api/lead')]); log('loaded page data'); });
+  on('dup', async () => { await Promise.all([get('/api/lead'), get('/api/lead'), get('/api/lead')]); log('fired /api/lead 3×'); });
+  on('n1', async () => { const list = await get('/api/lead'); await Promise.all(list.map((l) => get(`/api/lead/${l.id}`))); log(`fetched ${list.length} leads one by one`); });
+  on('fail', async () => { const r = await fetch('/api/fail'); log('status ' + r.status); });
+  on('slow', async () => { await get('/api/slow'); log('slow call done'); });
+  on('xhr', () => new Promise((resolve) => {
+    const x = new XMLHttpRequest();
+    x.open('POST', '/api/lead');
+    x.setRequestHeader('Content-Type', 'application/json');
+    x.setRequestHeader('Authorization', 'Bearer demo-secret-token');
+    x.onload = () => { log('xhr ' + x.status + ' ' + x.responseText); resolve(); };
+    x.send(JSON.stringify({ name: 'New lead', password: 'not-shown' }));
+  }));
+  on('gql', async () => {
+    const q = (operationName, query) => fetch('/graphql', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ operationName, query }) });
+    await Promise.all([q('GetLeads', 'query GetLeads { leads { id name } }'), q('SaveLead', 'mutation SaveLead { save { id } }')]);
+    log('graphql done');
+  });
+  on('sse', async () => {
+    const es = new EventSource('/api/events');
+    es.onmessage = (e) => log('sse ' + e.data);
+    es.addEventListener('leadUpdated', (e) => log('sse leadUpdated ' + e.data));
+    setTimeout(() => es.close(), 2500);
+  });
+  on('beacon', async () => { navigator.sendBeacon('/api/track', JSON.stringify({ event: 'click' })); log('beacon sent'); });
+  on('ext', async () => { await fetch('https://httpbin.org/get?demo=1').catch(() => {}); log('third-party call made'); });
+  on('use', async () => { const leads = await get('/api/lead'); log(leads.map((l) => `${l.id}:${l.name}`).join(', ')); });
+
+  document.querySelectorAll('[data-link]').forEach((a) => a.addEventListener('click', (e) => {
+    e.preventDefault(); history.pushState({}, '', a.getAttribute('href')); log('navigated to ' + location.pathname);
+  }));
+</script>
+</body>
+</html>

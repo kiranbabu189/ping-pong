@@ -1,0 +1,61 @@
+{
+  "name": "api-pingpong",
+  "version": "0.1.0",
+  "description": "Framework-agnostic floating devtool that records every API call in your app, groups them into a path tree, and flags duplicate, N+1, slow and failing calls.",
+  "keywords": [
+    "devtools",
+    "api",
+    "network",
+    "fetch",
+    "xhr",
+    "debug",
+    "inspector",
+    "duplicate-requests",
+    "har",
+    "openapi"
+  ],
+  "license": "MIT",
+  "author": "kiranb189",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "unpkg": "./dist/api-pingpong.auto.global.js",
+  "jsdelivr": "./dist/api-pingpong.auto.global.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./auto": {
+      "types": "./dist/auto.d.ts",
+      "import": "./dist/auto.js",
+      "require": "./dist/auto.cjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "sideEffects": [
+    "./dist/auto.js",
+    "./dist/auto.cjs",
+    "./dist/*.global.js"
+  ],
+  "scripts": {
+    "build": "tsup && node scripts/copy-to-extension.mjs",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "demo": "npm run build && node demo/server.mjs",
+    "prepublishOnly": "npm run typecheck && npm test && npm run build"
+  },
+  "devDependencies": {
+    "happy-dom": "^15.11.7",
+    "tsup": "^8.3.5",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.8"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "api-pingpong",
+  "version": "0.1.0",
+  "description": "See every API call a site makes, grouped by path, with duplicate / N+1 / slow call detection. Enable per site.",
+  "permissions": ["scripting", "storage", "activeTab"],
+  "host_permissions": ["<all_urls>"],
+  "background": { "service_worker": "background.js" },
+  "action": { "default_popup": "popup.html", "default_title": "api-pingpong" }
+}

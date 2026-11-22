@@ -1,0 +1,5 @@
+node_modules
+dist
+extension/api-pingpong.auto.global.js
+*.log
+.DS_Store
