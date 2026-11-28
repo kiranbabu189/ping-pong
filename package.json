@@ -1,6 +1,6 @@
 {
   "name": "api-pingpong",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Framework-agnostic floating devtool that records every API call in your app, groups them into a path tree, and flags duplicate, N+1, slow and failing calls.",
   "keywords": [
     "devtools",
