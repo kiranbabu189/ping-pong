@@ -81,7 +81,7 @@ Beyond listing and counting calls, api-pingpong includes tools for debugging, te
 | **Copy as cURL / fetch** | Copies any call as a ready-to-run command. Secrets stay redacted by default. **Copy cURL + auth** includes the real `Authorization` and cookie headers; these are kept in memory only and never exported. | Call detail |
 | **Replay** | Re-sends a call with its original headers and body. The replay is recorded and linked to the original. | Call detail, endpoint view |
 | **Mock responses** | Override status and body, simulate a **network error** (`status: 0`), or add **latency** to a real response, all without touching the backend. Presets cover 500, 404, network error, slow (3 s) and empty list. Rules match a pattern (`/api/lead/:id`), a concrete path, a full URL or a `*` wildcard. Works for fetch and XHR (axios), and persists across reloads. | **Mocks** tab, or **Mock with this response** on any call |
-| **Pause recording** | Stop recording without reloading. Requests still go through untouched. | ⏸ in the header |
+| **Pause recording** | Stop recording without reloading. Requests still go through untouched. | Pause button in the header |
 
 ### Compare, share and document
 
@@ -98,7 +98,7 @@ Beyond listing and counting calls, api-pingpong includes tools for debugging, te
 |---|---|
 | **Keyboard shortcut** | **Alt+Shift+A** toggles the panel. Configurable with `hotkey`, or turn it off with `false`. |
 | **Draggable button** | Drag the floating button anywhere; its position is remembered, and the panel opens next to it. |
-| **Expanded view** | ⤢ switches to a large, centered panel for long lists and big response bodies. |
+| **Expanded view** | The expand button switches to a large, centered panel for long lists and big response bodies. |
 | **Light and dark themes** | Follows the system color scheme. |
 | **Browser extension** | Use the panel on any site (staging, production, sites you don't own) without changing their code. See [Browser extension](#browser-extension-zero-code). |
 

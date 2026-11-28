@@ -19,13 +19,14 @@ import { toOpenAPI, toTypeScript } from '../features/schema';
 import { shortInitiator } from '../features/initiator';
 import { newRuleId } from '../features/mocks';
 import { formatBytes, formatMs, loadJSON, saveJSON } from '../core/utils';
-import { ICON, STYLES } from './styles';
+import { ICON, ICONS, STYLES } from './styles';
 
 type Tab = 'calls' | 'insights' | 'mocks' | 'compare' | 'export';
 type View = { type: 'tree' } | { type: 'endpoint'; key: string } | { type: 'call'; id: number };
 type Flag = 'errors' | 'dupes' | 'slow' | 'mocked';
 
 const UI_KEY = 'api-pingpong:ui';
+const SEARCH_HINT = 'Filter by path, status code, page or GraphQL operation';
 const METHODS = ['ALL', 'GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'WS', 'SSE'];
 
 interface PersistedUI {
@@ -67,6 +68,7 @@ export class PingPongUI {
   private lastRender = 0;
   private cleanups: Array<() => void> = [];
   private lastTreeIds: string[] = [];
+  private searchObserver: ResizeObserver | null = null;
 
   constructor(
     private rec: Recorder,
@@ -102,6 +104,7 @@ export class PingPongUI {
 
   destroy(): void {
     this.cleanups.forEach((c) => c());
+    this.searchObserver?.disconnect();
     if (this.renderTimer) clearTimeout(this.renderTimer);
     this.host.remove();
   }
@@ -123,10 +126,10 @@ export class PingPongUI {
         <div class="head">
           <span class="title">${ICON}api-pingpong</span>
           <span class="summary"></span>
-          <button class="icon-btn" data-act="pause" title="Pause / resume recording">⏸</button>
-          <button class="icon-btn" data-act="clear" title="Clear recorded calls">⌫</button>
-          <button class="icon-btn" data-act="large" title="Toggle size">⤢</button>
-          <button class="icon-btn" data-act="close" title="Close" aria-label="Close">✕</button>
+          <button class="icon-btn" data-act="pause" title="Pause recording" aria-label="Pause recording" aria-pressed="false">${ICONS.pause}</button>
+          <button class="icon-btn" data-act="clear" title="Clear recorded calls" aria-label="Clear recorded calls">${ICONS.clear}</button>
+          <button class="icon-btn" data-act="large" title="Expand panel" aria-label="Expand panel">${ICONS.maximize}</button>
+          <button class="icon-btn" data-act="close" title="Close" aria-label="Close">${ICONS.close}</button>
         </div>
         <nav class="tabs" role="tablist"></nav>
         <div class="toolbar"></div>
@@ -353,6 +356,14 @@ export class PingPongUI {
     this.fab.classList.toggle('paused', this.rec.paused);
   }
 
+  private updateSizeButton(): void {
+    const btn = this.wrap.querySelector('[data-act="large"]')!;
+    const label = this.large ? 'Shrink panel' : 'Expand panel';
+    btn.innerHTML = this.large ? ICONS.minimize : ICONS.maximize;
+    btn.setAttribute('title', label);
+    btn.setAttribute('aria-label', label);
+  }
+
   private updateHeader(): void {
     const calls = this.rec.store.calls;
     let errors = 0;
@@ -371,8 +382,14 @@ export class PingPongUI {
     if (this.rec.paused) parts.push('paused');
     this.summaryEl.textContent = parts.join(' · ');
     const pauseBtn = this.wrap.querySelector('[data-act="pause"]')!;
-    pauseBtn.textContent = this.rec.paused ? '▶' : '⏸';
-    pauseBtn.classList.toggle('on', this.rec.paused);
+    const paused = this.rec.paused;
+    pauseBtn.innerHTML = paused ? ICONS.play : ICONS.pause;
+    pauseBtn.classList.toggle('on', paused);
+    pauseBtn.setAttribute('aria-pressed', String(paused));
+    const pauseLabel = paused ? 'Resume recording' : 'Pause recording';
+    pauseBtn.setAttribute('title', pauseLabel);
+    pauseBtn.setAttribute('aria-label', pauseLabel);
+    this.updateSizeButton();
   }
 
   // ------------------------------------------------------------------ render
@@ -410,15 +427,40 @@ export class PingPongUI {
     if (!show) return;
     const chip = (f: Flag, label: string) => `<button class="chip ${this.flags.has(f) ? 'on' : ''}" data-act="flag" data-flag="${f}">${label}</button>`;
     this.toolbarEl.innerHTML = `
-      <input type="search" placeholder="Filter by path, status, page, GraphQL op…" value="${esc(this.q)}" data-input="q" aria-label="Filter calls">
+      <label class="search ${this.q ? 'has-value' : ''}">
+        <input type="search" value="${esc(this.q)}" data-input="q" aria-label="Filter calls by path, status, page or GraphQL operation">
+        <span class="ph" aria-hidden="true"><span class="ph-track"><span>${SEARCH_HINT}</span><span>${SEARCH_HINT}</span></span></span>
+      </label>
       <select data-change="method" aria-label="Method">${METHODS.map((m) => `<option ${m === this.method ? 'selected' : ''}>${m}</option>`).join('')}</select>
       ${chip('errors', 'Errors')}${chip('dupes', 'Dupes')}${chip('slow', 'Slow')}${chip('mocked', 'Mocked')}
       <span class="seg" role="group" aria-label="Group by">
         <button class="${this.groupBy === 'path' ? 'on' : ''}" data-act="group" data-group="path">Path</button>
         <button class="${this.groupBy === 'page' ? 'on' : ''}" data-act="group" data-group="page">Page</button>
       </span>
-      <button class="icon-btn" data-act="expand-all" title="Expand all">⊞</button>
-      <button class="icon-btn" data-act="collapse-all" title="Collapse all">⊟</button>`;
+      <button class="icon-btn" data-act="expand-all" title="Expand all" aria-label="Expand all">${ICONS.expandAll}</button>
+      <button class="icon-btn" data-act="collapse-all" title="Collapse all" aria-label="Collapse all">${ICONS.collapseAll}</button>`;
+    this.setupSearchHint();
+  }
+
+  /** Scroll the search hint like a ticker, but only when it doesn't fit. */
+  private setupSearchHint(): void {
+    this.searchObserver?.disconnect();
+    const box = this.toolbarEl.querySelector<HTMLElement>('.search');
+    if (!box) return;
+    const measure = () => {
+      const ph = box.querySelector<HTMLElement>('.ph')!;
+      const text = box.querySelector<HTMLElement>('.ph-track span')!;
+      const textWidth = text.getBoundingClientRect().width;
+      const overflow = textWidth > ph.clientWidth + 1;
+      box.classList.toggle('scroll', overflow);
+      // ~35px per second, regardless of text length
+      if (overflow) box.style.setProperty('--ph-dur', `${Math.max(6, textWidth / 35).toFixed(1)}s`);
+    };
+    measure();
+    if (typeof ResizeObserver !== 'undefined') {
+      this.searchObserver = new ResizeObserver(measure);
+      this.searchObserver.observe(box);
+    }
   }
 
   private renderBody(): void {
@@ -452,7 +494,7 @@ export class PingPongUI {
     const all = this.rec.store.calls;
     if (!all.length) {
       return `<div class="empty"><b>No API calls yet</b>fetch, XHR (axios), WebSocket, EventSource and sendBeacon calls will appear here as your app makes them.${
-        this.rec.paused ? '<br><br>Recording is <b style="display:inline">paused</b> — press ▶ to resume.' : ''
+        this.rec.paused ? '<br><br>Recording is <b style="display:inline">paused</b> — press the resume (play) button at the top to continue.' : ''
       }</div>`;
     }
     const calls = this.filteredCalls();
@@ -514,7 +556,7 @@ export class PingPongUI {
   }
 
   private crumbs(method: string, label: string, extra = ''): string {
-    return `<div class="crumbs"><button class="icon-btn" data-act="back" aria-label="Back">←</button>
+    return `<div class="crumbs"><button class="icon-btn" data-act="back" title="Back" aria-label="Back">${ICONS.back}</button>
       <span class="m ${esc(method)}">${esc(method)}</span><span class="ep-label" title="${esc(label)}">${esc(label)}</span>${extra}</div>`;
   }
 
@@ -778,6 +820,7 @@ export class PingPongUI {
         this.large = !this.large;
         this.panel.classList.toggle('large', this.large);
         this.placePanel();
+        this.updateSizeButton();
         return this.persist();
       case 'pause':
         this.rec.paused = !this.rec.paused;
@@ -906,6 +949,7 @@ export class PingPongUI {
     const t = e.target as HTMLInputElement;
     if (t.dataset.input === 'q') {
       this.q = t.value;
+      t.closest('.search')?.classList.toggle('has-value', !!t.value);
       this.renderBody();
     } else if (t.dataset.field && this.editingRule) {
       this.readRuleField(t);

@@ -9,6 +9,7 @@ export const STYLES = /* css */ `
   --err: #c0262d; --err-bg: #fdecec; --warn: #a15c00; --warn-bg: #fff4e0; --ok: #0f7b4b; --ok-bg: #e6f6ee;
   --info: #1d4ed8; --info-bg: #e8effd; --shadow: 0 12px 40px rgba(15, 23, 42, .18), 0 2px 8px rgba(15, 23, 42, .08);
   --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235b6271' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   font: 12.5px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--fg);
 }
 @media (prefers-color-scheme: dark) {
@@ -18,11 +19,14 @@ export const STYLES = /* css */ `
     --get: #4ade80; --post: #fbbf24; --put: #60a5fa; --patch: #c084fc; --delete: #f87171; --other: #94a3b8;
     --err: #f87171; --err-bg: #3a1d20; --warn: #fbbf24; --warn-bg: #3a2e14; --ok: #4ade80; --ok-bg: #16301f;
     --info: #60a5fa; --info-bg: #182a45; --shadow: 0 12px 40px rgba(0,0,0,.55);
+    --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a3a9b6' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   }
 }
 button { font: inherit; color: inherit; cursor: pointer; }
 input, select, textarea { font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; }
 input:focus, select:focus, textarea:focus, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+select { -webkit-appearance: none; appearance: none; padding-right: 28px; cursor: pointer; background: var(--bg) var(--chevron) no-repeat right 9px center / 12px 12px; }
+select:hover { border-color: var(--fg3); }
 textarea { font-family: var(--mono); font-size: 12px; width: 100%; min-height: 90px; resize: vertical; }
 
 /* Floating button */
@@ -54,9 +58,10 @@ textarea { font-family: var(--mono); font-size: 12px; width: 100%; min-height: 9
 .title { font-weight: 650; display: flex; align-items: center; gap: 6px; }
 .title svg { width: 16px; height: 16px; color: var(--accent); }
 .summary { color: var(--fg2); font-size: 12px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.icon-btn { border: 1px solid transparent; background: transparent; border-radius: 6px; padding: 3px 7px; color: var(--fg2); }
-.icon-btn:hover { background: var(--bg3); color: var(--fg); }
-.icon-btn.on { color: var(--accent); }
+.icon-btn { display: inline-grid; place-items: center; width: 26px; height: 26px; flex: none; border: 1px solid transparent; background: transparent; border-radius: 7px; padding: 0; color: var(--fg); opacity: .78; }
+.icon-btn svg { width: 15px; height: 15px; }
+.icon-btn:hover { background: var(--bg3); opacity: 1; }
+.icon-btn.on { color: var(--accent); background: var(--bg3); border-color: var(--line); opacity: 1; }
 
 .tabs { display: flex; gap: 2px; padding: 0 8px; border-bottom: 1px solid var(--line); background: var(--bg2); overflow-x: auto; }
 .tab { border: none; background: none; padding: 7px 10px; color: var(--fg2); border-bottom: 2px solid transparent; white-space: nowrap; }
@@ -66,7 +71,18 @@ textarea { font-family: var(--mono); font-size: 12px; width: 100%; min-height: 9
 .tab .n.hot { background: var(--err); color: #fff; }
 
 .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 7px 10px; border-bottom: 1px solid var(--line); }
-.toolbar input[type=search] { flex: 1 1 180px; min-width: 120px; }
+.search { position: relative; display: flex; flex: 1 1 180px; min-width: 120px; }
+.search input { width: 100%; }
+.search .ph { position: absolute; inset: 1px 10px 1px 9px; display: flex; align-items: center; overflow: hidden; white-space: nowrap; color: var(--fg3); pointer-events: none; }
+.search .ph-track { display: inline-flex; flex: none; }
+.search .ph-track span { padding-right: 40px; }
+.search .ph-track span + span { display: none; }
+.search.scroll .ph { -webkit-mask-image: linear-gradient(to right, transparent, #000 10px, #000 calc(100% - 14px), transparent); mask-image: linear-gradient(to right, transparent, #000 10px, #000 calc(100% - 14px), transparent); }
+.search.scroll .ph-track { animation: pp-marquee var(--ph-dur, 12s) linear infinite; }
+.search.scroll .ph-track span + span { display: inline; }
+.search:hover .ph-track, .search:focus-within .ph-track { animation-play-state: paused; }
+.search.has-value .ph { display: none; }
+@keyframes pp-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 .chip { border: 1px solid var(--line); background: var(--bg); border-radius: 999px; padding: 2px 9px; font-size: 12px; color: var(--fg2); }
 .chip.on { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
 .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
@@ -150,7 +166,28 @@ pre { margin: 0; padding: 8px 10px 10px; font: 12px/1.5 var(--mono); white-space
 
 .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 7px 14px; border-radius: 8px; box-shadow: var(--shadow); font-size: 12.5px; pointer-events: none; animation: pp-fade 1.8s forwards; }
 @keyframes pp-fade { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
-@media (prefers-reduced-motion: reduce) { .fab, .caret { transition: none; } .toast { animation: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .fab, .caret { transition: none; } .toast { animation: none; }
+  .search.scroll .ph-track { animation: none; }
+  .search.scroll .ph-track span + span { display: none; }
+  .search .ph-track span { overflow: hidden; text-overflow: ellipsis; padding-right: 0; }
+  .search .ph-track { min-width: 0; flex: 1; }
+}
 `;
 
 export const ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7h11l-3-3"/><path d="M17 17H6l3 3"/></svg>`;
+
+const svg = (body: string, fill = false) =>
+  `<svg viewBox="0 0 24 24" fill="${fill ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
+
+export const ICONS = {
+  pause: svg('<rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/>', true),
+  play: svg('<path d="M7 5v14l12-7z"/>', true),
+  clear: svg('<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M6 6l1 14h10l1-14"/><path d="M10 11v6M14 11v6"/>'),
+  maximize: svg('<path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>'),
+  minimize: svg('<path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7"/>'),
+  close: svg('<path d="M18 6 6 18M6 6l12 12"/>'),
+  expandAll: svg('<path d="m7 6 5 5 5-5M7 13l5 5 5-5"/>'),
+  collapseAll: svg('<path d="m7 11 5-5 5 5M7 18l5-5 5 5"/>'),
+  back: svg('<path d="M19 12H5M12 19l-7-7 7-7"/>'),
+};
